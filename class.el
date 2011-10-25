@@ -25,44 +25,74 @@
 
 ;;; Code:
 
-(defun search-member (member class &optional visited)
-  (unless (memq class visited)
-    (setq visited (cons class visited))
-    (let ((found (assoc member class))
-          (super (cdr (assoc 'super class))))
-      (while (and super (not found))
-        (setq found (search-member member (car super) visited))
-        (setq super (cdr super)))
-      found)))
-
 ;;;###autoload
-(defmacro class (name super &rest forms)
-  (set name
-       (cons (cons 'super (if (listp super) super (list super)))
-             (mapcar (lambda (form)
-                       (if (and (eq (car form) 'defun)
-                                (not (eq (cadr form) 'super)))
+(defmacro class (name bases &rest forms)
+  (let ((bases (cond ((listp bases) (remove-duplicates bases))
+                     ((symbolp bases) (list bases))
+                     (t (error "wrong type of bases"))))
+        (members (mapcar
+                  (lambda (form)
+                    (cond ((eq (car form) 'defun)
                            (cons (cadr form)
-                                 (cons 'lambda (cddr form)))))
-                     forms)))
-  `(defun ,name (&rest args)
-     (let ((instance '((class . ,name)))
-           (init (cdr (search-member 'init ,name))))
-       (when init
-         (apply init instance args))
-       instance)))
+                                 (cons 'lambda (cddr form))))
+                          ((eq (car form) 'setq) nil)
+                          (t nil)))
+                  forms)))
+    (setq members (delq nil members))
+    (delete-duplicates members :test (lambda (x y) (eq (car x) (car y))))
+    (delete-if (lambda (m) (memq (car m) '(class bases))) members)
+    (mapc (lambda (base)
+            (unless (boundp base)
+              (error (format "%s: class doesn't exist" base))))
+          bases)
+    `(progn
+       (setq ,name (append
+                    (quote ,members)
+                    (list (cons 'class 'Type)
+                          (cons 'bases (quote ,bases)))))
+       (defun ,name (&rest args)
+         (let ((instance '((class . ,name)))
+               (init (cdr (funcall
+                           (cdr (assoc 'search-member Object))
+                           'init ,name))))
+           (when init
+             (apply init instance args))
+           instance)))))
 
 ;;;###autoload
 (defun @ (instance member &rest args)
   (let* ((class (cdr (assoc 'class instance)))
          (cell (or (assoc member instance)
-                   (search-member member (symbol-value class))))
+                   (funcall (cdr (assoc 'search-member Object))
+                            member (symbol-value class))))
          (body (cdr cell)))
-    (when (null class)
-      (error "invalid instance"))
-    (cond ((functionp body) (apply body instance args))
+    (when (null class) (error "invalid instance"))
+    (cond ((functionp body)
+           ;; call instance or class method
+           (if (assoc 'bases instance)
+               (apply body args)
+             (apply body instance args)))
+          ;; get and set instance property
           (cell (if args (setcdr cell (car args)) body))
+          ;; create and set instance property
           (args (setcdr (last instance) (list (cons member (car args)))))
-          (t (format "no such member %s" member)))))
+          (t    (format "%s: no such member" member)))))
+
+(class Object ()
+       (defun search-member (member class &optional visited)
+         (unless (memq class visited)
+           (setq visited (cons class visited))
+           (let* ((search-member (cdr (assoc 'search-member Object)))
+                  (class (if (symbolp class)
+                             (symbol-value class)
+                           class))
+                  (found (assoc member class))
+                  (bases (cdr (assoc 'bases class))))
+             (while (and bases (not found))
+               (setq found (funcall search-member member (car bases) visited))
+               (setq bases (cdr bases)))
+             found))))
+
+(class Type (Object))
 
 (provide 'class)
