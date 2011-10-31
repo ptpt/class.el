@@ -1,4 +1,4 @@
-;;; class.el --- an Object Oriented Programming extension for Emacs Lisp
+;;; class.el --- an OOP system in emacs lisp
 
 ;; Copyright (C) 2011 Tao Peng <ptpttt@gmail.com>
 
@@ -25,22 +25,93 @@
 
 ;;; Code:
 
-;;;###autoload
+(require 'cl)
+
+(defun oo--search-member (member instance &optional nested visited)
+  (unless (memq instance visited)
+    (let* ((instance (if (symbolp instance)
+                         (symbol-value instance)
+                       instance))
+           (found (assoc member instance))
+           (class (oo-class-of instance))
+           (bases (cond ((eq class 'Type)
+                         (oo-bases-of instance))
+                        (class (list class))
+                        (t nil))))
+      (when (and found
+                 (or (and visited (memq 'private (cadr found)))
+                     (and (not nested) (memq 'protected (cadr found)))))
+        (setq found nil))
+      (while (and bases (not found))
+        (setq found (oo--search-member
+                     member (car bases)
+                     nested (cons instance visited)))
+        (setq bases (cdr bases)))
+      found)))
+
+(defun oo--read-forms (forms &optional types)
+  (let* ((allowed '(public private protected classmethod staticmethod))
+         (tail types))
+    (while tail
+      (cond ((memq (car tail) '(private protected public))
+             (setcdr tail (remove-if
+                           (lambda (type)
+                             (memq type '(private protected public)))
+                           (cdr tail))))
+            ((memq (car tail) '(classmethod staticmethod))
+             (setcdr tail (remove-if
+                           (lambda (type)
+                             (memq type '(classmethod staticmethod)))
+                           (cdr tail))))
+            (t (error "wrong type of member")))
+      (setq tail (cdr tail)))
+    (apply #'nconc
+           (mapcar
+            (lambda (form)
+              (let ((type (car form)) (subforms (cdr form)))
+                (cond
+                 ((symbolp type)
+                  (cond ((eq type 'defun)
+                         (list (append (list (car subforms) types 'lambda)
+                                       (cdr subforms))))
+                        ((eq type 'setq)
+                         (list (cons (car subforms)
+                                     (cons types (eval (cadr subforms))))))
+                        ((memq type allowed)
+                         (oo--read-forms subforms (cons type types)))
+                        (t (error "invalid syntax"))))
+                 ((listp type)
+                  (oo--read-forms subforms (append type types)))
+                 (t (error "invalid syntax")))))
+            forms))))
+
+(defmacro oo-class-of (instance)
+  `(cddr (assoc 'class ,instance)))
+
+(defmacro oo-bases-of (instance)
+  `(cddr (assoc 'bases ,instance)))
+
+(defmacro oo-class-p (instance)
+  `(eq (oo-class-of ,instance) 'Type))
+
+(defmacro self. (property &rest args)
+  `(@ self (quote ,property) ,@args))
+
+(defmacro cls. (property &rest args)
+  `(@ cls (quote ,property) ,@args))
+
+(defmacro this. (property &rest args)
+  `(@ this. (quote ,property) ,@args))
+
 (defmacro class (name bases &rest forms)
   (let ((bases (cond ((listp bases) (remove-duplicates bases))
                      ((symbolp bases) (list bases))
                      (t (error "wrong type of bases"))))
-        (members (mapcar
-                  (lambda (form)
-                    (cond ((eq (car form) 'defun)
-                           (cons (cadr form)
-                                 (cons 'lambda (cddr form))))
-                          ((eq (car form) 'setq) nil)
-                          (t nil)))
-                  forms)))
-    (setq members (delq nil members))
-    (delete-duplicates members :test (lambda (x y) (eq (car x) (car y))))
-    (delete-if (lambda (m) (memq (car m) '(class bases))) members)
+        (members (remove-if (lambda (m) (memq (car m) '(class bases)))
+                            (remove-duplicates
+                             (oo--read-forms forms)
+                             :test
+                             (lambda (x y) (eq (car x) (car y)))))))
     (mapc (lambda (base)
             (unless (boundp base)
               (error (format "%s: class doesn't exist" base))))
@@ -48,50 +119,43 @@
     `(progn
        (setq ,name (append
                     (quote ,members)
-                    (list (cons 'class 'Type)
-                          (cons 'bases (quote ,bases)))))
+                    (list (cons 'class (cons nil 'Type))
+                          (cons 'bases (cons nil (quote ,bases))))))
        (defun ,name (&rest args)
-         (let ((instance '((class . ,name)))
-               (init (cdr (funcall
-                           (cdr (assoc 'search-member Object))
-                           'init ,name))))
+         (let ((instance '((class . (nil . ,name))))
+               (init (cddr (oo--search-member 'init ,name))))
            (when init
              (apply init instance args))
            instance)))))
 
-;;;###autoload
 (defun @ (instance member &rest args)
-  (let* ((class (cdr (assoc 'class instance)))
-         (cell (or (assoc member instance)
-                   (funcall (cdr (assoc 'search-member Object))
-                            member (symbol-value class))))
-         (body (cdr cell)))
-    (when (null class) (error "invalid instance"))
-    (cond ((functionp body)
+  (when (null (oo-class-of instance))
+    (error "invalid instance"))
+  (let* ((nested (and (boundp 'this--instance)
+                      (eq this--instance instance)))
+         (this--instance instance)
+         ;; a slot is (cons member (cons type body))
+         (slot (oo--search-member member instance nested))
+         (body (cddr slot)))
+    (cond ((and (functionp body)
+                (not (memq member '(class bases))))
            ;; call instance or class method
-           (if (assoc 'bases instance)
+           (if (and (oo-class-p instance)
+                    (or (not (memq 'classmethod (cadr slot)))
+                        (memq 'staticmethod (cadr slot))))
                (apply body args)
              (apply body instance args)))
           ;; get and set instance property
-          (cell (if args (setcdr cell (car args)) body))
+          (slot (if args (setcdr (cdr slot) (car args)) body))
           ;; create and set instance property
-          (args (setcdr (last instance) (list (cons member (car args)))))
+          (args (setcdr (last instance)
+                        (list (cons member (cons nil (car args))))))
           (t    (format "%s: no such member" member)))))
 
 (class Object ()
-       (defun search-member (member class &optional visited)
-         (unless (memq class visited)
-           (setq visited (cons class visited))
-           (let* ((search-member (cdr (assoc 'search-member Object)))
-                  (class (if (symbolp class)
-                             (symbol-value class)
-                           class))
-                  (found (assoc member class))
-                  (bases (cdr (assoc 'bases class))))
-             (while (and bases (not found))
-               (setq found (funcall search-member member (car bases) visited))
-               (setq bases (cdr bases)))
-             found))))
+       (defun init (self))
+       (defun get-member (self member)
+         (oo--search-member member self)))
 
 (class Type (Object))
 
