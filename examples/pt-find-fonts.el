@@ -74,7 +74,7 @@
            font)))
 
 (setq pt-fonts
-      (Fonts pt-fonts-list))
+      (Fonts pt-font-list))
 
 (defun pt-font-shuffle ()
   (interactive)
