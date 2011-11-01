@@ -114,7 +114,7 @@ It can be used in class methods in which first argument is `cls'."
 It can be used in class methods in which first argument is `this'."
   `(@ this. (quote ,property) ,@args))
 
-(defmacro class (name bases &rest forms)
+(defmacro class (name bases &optional doc &rest slots)
   "Define NAME as a class that inherits from BASES.
 SLOTS is where you can define class members, which can be one of the
 following forms:
@@ -131,6 +131,10 @@ Methodes or properties with specified types:
 
 Supported types are `private', `protected', `classmethod' and
 `staticmethod'."
+  (unless (stringp doc)
+    (when slots (setq slots (cons doc slots)))
+    (setq doc ""))
+  (setq doc (concat "This is a CLASS." (if doc "\n\n") doc))
   (let ((bases (cond ((listp bases) (remove-duplicates bases))
                      ((symbolp bases) (list bases))
                      (t (error "wrong type of bases"))))
@@ -149,6 +153,7 @@ Supported types are `private', `protected', `classmethod' and
                     (list (cons 'class (cons nil 'Type))
                           (cons 'bases (cons nil (quote ,bases))))))
        (defun ,name (&rest args)
+         ,doc
          (let ((instance '((class . (nil . ,name))))
                (init (cddr (oo--search-member 'init ,name))))
            (when init
