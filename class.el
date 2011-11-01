@@ -50,6 +50,7 @@
       found)))
 
 (defun oo--read-forms (forms &optional types)
+  "Read SLOTS and return the normalized slots."
   (let* ((allowed '(public private protected classmethod staticmethod))
          (tail types))
     (while tail
@@ -86,24 +87,49 @@
             forms))))
 
 (defmacro oo-class-of (instance)
+  "Return the class of INSTANCE."
   `(cddr (assoc 'class ,instance)))
 
 (defmacro oo-bases-of (instance)
+  "Return the bases (superclasses) of INSTANCE."
   `(cddr (assoc 'bases ,instance)))
 
 (defmacro oo-class-p (instance)
+  "Return t if INSTANCE is an class object."
   `(eq (oo-class-of ,instance) 'Type))
 
 (defmacro self. (property &rest args)
+  "A shortcut to (@ self (quote PROPERTY) ARGS).
+It can be used in class methods in which first argument is `self'."
   `(@ self (quote ,property) ,@args))
 
 (defmacro cls. (property &rest args)
+  "A shortcut to (@ cls (quote PROPERTY) ARGS).
+It can be used in class methods in which first argument is `cls'."
   `(@ cls (quote ,property) ,@args))
 
 (defmacro this. (property &rest args)
+  "A shortcut to (@ this (quote PROPERTY) ARGS).
+It can be used in class methods in which first argument is `this'."
   `(@ this. (quote ,property) ,@args))
 
 (defmacro class (name bases &rest forms)
+  "Define NAME as a class that inherits from BASES.
+SLOTS is where you can define class members, which can be one of the
+following forms:
+
+Method:
+	(defun NAME ARGLIST BODY...)
+
+Property:
+	(setq SYM VALUE)
+
+Methodes or properties with specified types:
+	(TYPE
+		METHODS or PROPERTIES...)
+
+Supported types are `private', `protected', `classmethod' and
+`staticmethod'."
   (let ((bases (cond ((listp bases) (remove-duplicates bases))
                      ((symbolp bases) (list bases))
                      (t (error "wrong type of bases"))))
@@ -129,6 +155,11 @@
            instance)))))
 
 (defun @ (instance member &rest args)
+  "Invoke MEMBER of INSTANCE.
+
+If MEMBER is a method, call it with ARGS as arguments.
+If MEMBER is a property, return its value or set the value of ARGS
+to the property, depending on if ARGS supplied."
   (when (null (oo-class-of instance))
     (error "invalid instance"))
   (let* ((nested (and (boundp 'this--instance)
