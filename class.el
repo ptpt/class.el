@@ -49,10 +49,11 @@
         (setq bases (cdr bases)))
       found)))
 
-(defun oo--read-forms (forms &optional types)
+(defun oo--read-slots (slots &optional types)
   "Read SLOTS and return the normalized slots."
   (let* ((allowed '(public private protected classmethod staticmethod))
          (tail types))
+    ;; remove confilctive types
     (while tail
       (cond ((memq (car tail) '(private protected public))
              (setcdr tail (remove-if
@@ -68,23 +69,23 @@
       (setq tail (cdr tail)))
     (apply #'nconc
            (mapcar
-            (lambda (form)
-              (let ((type (car form)) (subforms (cdr form)))
+            (lambda (slot)
+              (let ((key (car slot)) (rest (cdr slot)))
                 (cond
-                 ((symbolp type)
-                  (cond ((eq type 'defun)
-                         (list (append (list (car subforms) types 'lambda)
-                                       (cdr subforms))))
-                        ((eq type 'setq)
-                         (list (cons (car subforms)
-                                     (cons types (eval (cadr subforms))))))
-                        ((memq type allowed)
-                         (oo--read-forms subforms (cons type types)))
+                 ((symbolp key)
+                  (cond ((eq key 'defun)
+                         (list (append (list (car rest) types 'lambda)
+                                       (cdr rest))))
+                        ((eq key 'setq)
+                         (list (cons (car rest)
+                                     (cons types (eval (cadr rest))))))
+                        ((memq key allowed)
+                         (oo--read-slots rest (cons key types)))
                         (t (error "invalid syntax"))))
-                 ((listp type)
-                  (oo--read-forms subforms (append type types)))
+                 ((listp key)
+                  (oo--read-slots rest (append key types)))
                  (t (error "invalid syntax")))))
-            forms))))
+            slots))))
 
 (defmacro oo-class-of (instance)
   "Return the class of INSTANCE."
@@ -135,7 +136,7 @@ Supported types are `private', `protected', `classmethod' and
                      (t (error "wrong type of bases"))))
         (members (remove-if (lambda (m) (memq (car m) '(class bases)))
                             (remove-duplicates
-                             (oo--read-forms forms)
+                             (oo--read-slots slots)
                              :test
                              (lambda (x y) (eq (car x) (car y)))))))
     (mapc (lambda (base)
