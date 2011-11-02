@@ -112,7 +112,7 @@ It can be used in class methods in which first argument is `cls'."
 (defmacro this. (property &rest args)
   "A shortcut to (@ this (quote PROPERTY) ARGS).
 It can be used in class methods in which first argument is `this'."
-  `(@ this. (quote ,property) ,@args))
+  `(@ this (quote ,property) ,@args))
 
 (defmacro class (name bases &optional doc &rest slots)
   "Define NAME as a class that inherits from BASES.
