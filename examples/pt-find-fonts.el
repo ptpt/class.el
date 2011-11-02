@@ -42,3 +42,5 @@
               (@ pt-fonts 'length))
     (@ pt-fonts 'next))
   (@ pt-fonts 'apply))
+
+(provide 'pt-find-fonts)
