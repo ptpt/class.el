@@ -132,7 +132,7 @@ Methodes or properties with specified types:
 Supported types are `private', `protected', `classmethod' and
 `staticmethod'."
   (unless (stringp doc)
-    (when slots (setq slots (cons doc slots)))
+    (when doc (setq slots (cons doc slots)))
     (setq doc ""))
   (setq doc (concat "This is a CLASS." (if doc "\n\n") doc))
   (let ((bases (cond ((listp bases) (remove-duplicates bases))
