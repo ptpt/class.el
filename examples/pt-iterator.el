@@ -1,3 +1,6 @@
+(require 'cl)
+(require 'class)
+
 (class Iterator (Object)
        (defun init (self set)
          (self. set (remove-duplicates set))
