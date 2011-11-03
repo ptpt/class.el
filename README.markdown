@@ -52,7 +52,7 @@ Define a class `A` inherited from the class `B` is easy as the following:
     (class A (B)
       ...)
 
-This library supports multi inheritance as well. A class `A` with
+This library supports multi inheritance as well. Class `A` with
 multiple base classes `B`, `C` and `D` looks like this:
 
     (class A (B C D)
@@ -60,7 +60,7 @@ multiple base classes `B`, `C` and `D` looks like this:
 
 Note: The method resolution order is **depth-first**. For example:
 
-	(class O ()
+    (class O ()
       (defun foo (self) "from class O"))
     (class B (O))
     (class C (O)
@@ -69,19 +69,53 @@ Note: The method resolution order is **depth-first**. For example:
       (defun init (self)))
     (class A (B C D))
 
-	(setq a (A))
+    (setq a (A))
     (@ a 'foo)
     => "from class O"
 
-Since the method `foo`'s search order is `B, O, C, D`, the `foo` called
+Since the search order of method `foo` is `B, O, C, D`, the `foo` called
 above is from class `O`.
 
-Custom classes are recommanded to inherit from the built-in class `Object`,
-which provides some useful methods such as `get-member`, default `init`,
-etc.
+Custom classes are recommanded to inherit from the built-in class
+`Object`, which provides some useful methods such as `get-member`,
+default `init`, etc.
 
-## Access to class members
+## Access to Members
 
-The following modifiers are supported define the type of members:
+Like other OOP languages, class members can be private, protected or
+public. To specify the access level for class members, you can use the
+following form:
 
-	private, protected, staticmethod, classmethod
+    (MODIFIER
+      SLOTS...)
+
+where modifier can be `private`, `protected` or `public` (default).
+
+## Static and Class Methods
+
+Static methods do not receive an implicit first argument, while class
+methods receives the class as its first argument. They are defined
+inside the form starting with modifier `staticmethod` and `classmethod`
+respectively , for example:
+
+    (class Class (Object)
+      ...
+
+      (staticmethod
+        (defun foo ()
+          (print "greet from static method")))
+
+       (private
+         (setq var 10))
+       
+       (classmethod
+         (defun bar (cls)
+           (1+ (@ cls 'var))))
+
+      ...)
+
+      (@ (Class) 'foo)
+      => "greet from static method"
+      
+      (@ (Class) 'bar)
+      => 11
