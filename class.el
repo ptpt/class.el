@@ -49,11 +49,11 @@
         (setq bases (cdr bases)))
       found)))
 
-(defun oo--read-slots (slots &optional types)
+(defun oo--read-slots (slots &optional modifiers)
   "Read SLOTS and return the normalized slots."
-  (let* ((allowed '(public private protected classmethod staticmethod))
-         (tail types))
-    ;; remove confilctive types
+  (let* ((allowed-modifiers '(public private protected classmethod staticmethod))
+         (tail modifiers))
+    ;; remove confilctive modifiers
     (while tail
       (cond ((memq (car tail) '(private protected public))
              (setcdr tail (remove-if
@@ -74,16 +74,16 @@
                 (cond
                  ((symbolp key)
                   (cond ((eq key 'defun)
-                         (list (append (list (car rest) types 'lambda)
+                         (list (append (list (car rest) modifiers 'lambda)
                                        (cdr rest))))
                         ((eq key 'setq)
                          (list (cons (car rest)
-                                     (cons types (eval (cadr rest))))))
-                        ((memq key allowed)
-                         (oo--read-slots rest (cons key types)))
+                                     (cons modifiers (eval (cadr rest))))))
+                        ((memq key allowed-modifiers)
+                         (oo--read-slots rest (cons key modifiers)))
                         (t (error "invalid syntax"))))
                  ((listp key)
-                  (oo--read-slots rest (append key types)))
+                  (oo--read-slots rest (append key modifiers)))
                  (t (error "invalid syntax")))))
             slots))))
 
