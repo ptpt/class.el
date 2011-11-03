@@ -76,9 +76,9 @@ Note: The method resolution order is **depth-first**. For example:
 Since the search order of method `foo` is `B, O, C, D`, the `foo` called
 above is from class `O`.
 
-Custom classes are recommanded to inherit from the built-in class
-`Object`, which provides some useful methods such as `get-member`,
-default `init`, etc.
+Custom classes are supposed to inherit from the built-in class `Object`,
+which provides some useful methods such as `get-member`, default `init`,
+etc.
 
 ## Access to Members
 
@@ -89,14 +89,14 @@ following form:
     (MODIFIER
       SLOTS...)
 
-where modifier can be `private`, `protected` or `public` (default).
+where `MODIFIER` can be `private`, `protected` or `public` (default).
 
 ## Static and Class Methods
 
 Static methods do not receive an implicit first argument, while class
 methods receives the class as its first argument. They are defined
 inside the form starting with modifier `staticmethod` and `classmethod`
-respectively , for example:
+respectively, for example:
 
     (class Class (Object)
       ...
@@ -114,8 +114,8 @@ respectively , for example:
 
       ...)
 
-      (@ (Class) 'foo)
+      (@ Class 'foo)
       => "greet from static method"
       
-      (@ (Class) 'bar)
+      (@ Class 'bar)
       => 11
