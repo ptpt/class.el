@@ -25,7 +25,7 @@ Define a class `My-Class`:
 initialize a new instance:
 
     (setq obj (My-Class "hello"))
-    (setq obj 'arg)
+    (@ obj 'arg)
     => "hello"
 
 `obj` is now an instance of `My-Class`. Call the method `set-arg` to
