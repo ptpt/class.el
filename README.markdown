@@ -47,13 +47,13 @@ class`.
 
 ## Inheritance
 
-Define a class `A` inherited from the class `B` is easy as the following:
+Define class `A` that inherits from class `B`:
 
     (class A (B)
       ...)
 
 This library supports multi inheritance as well. Class `A` with
-multiple base classes `B`, `C` and `D` looks like this:
+multiple bases `B`, `C` and `D` looks like this:
 
     (class A (B C D)
       ...)
