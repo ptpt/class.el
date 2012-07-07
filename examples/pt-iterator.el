@@ -21,6 +21,7 @@
 
        (defun shuffle (self)
          (when (> (self. length) 1)
+           (random t)
            (let ((n (1+ (random (self. length)))))
              (while (= n (self. length))
                (setq n (1+ (random (self. length)))))
