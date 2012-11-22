@@ -4,13 +4,9 @@
 (class Themes (Iterator)
        (defun apply (self)
          (let ((theme (self. current)))
-           (when theme
-             (cond ((listp theme)
-                    (eval theme))
-                   ((symbolp theme)
-                    (require theme)
-                    (funcall theme))
-                   (t (error "Color theme not found"))))
+           (mapc (lambda (theme) (disable-theme theme))
+                 custom-enabled-themes)
+           (load-theme theme t)
            theme)))
 
 (setq pt-themes (Themes nil))
