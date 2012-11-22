@@ -39,7 +39,7 @@
   (interactive)
   (@ pt-fonts 'reset)
   (while (and (not (@ pt-fonts 'verify))
-              (@ pt-fonts 'length))
+              (not (zerop (@ pt-fonts 'length))))
     (@ pt-fonts 'next))
   (@ pt-fonts 'apply))
 
