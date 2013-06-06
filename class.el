@@ -27,15 +27,15 @@
 
 (require 'cl)
 
-(defun oo--search-member (member instance &optional nested visited)
+(defun class--search-member (member instance &optional nested visited)
   (unless (memq instance visited)
     (let* ((instance (if (symbolp instance)
                          (symbol-value instance)
                        instance))
            (found (assoc member instance))
-           (class (oo-class-of instance))
+           (class (class-of instance))
            (bases (cond ((eq class 'Type)
-                         (oo-bases-of instance))
+                         (class-bases-of instance))
                         (class (list class))
                         (t nil))))
       (when (and found
@@ -43,13 +43,13 @@
                      (and (not nested) (memq 'protected (cadr found)))))
         (setq found nil))
       (while (and bases (not found))
-        (setq found (oo--search-member
+        (setq found (class--search-member
                      member (car bases)
                      nested (cons instance visited)))
         (setq bases (cdr bases)))
       found)))
 
-(defun oo--read-slots (slots &optional modifiers)
+(defun class--read-slots (slots &optional modifiers)
   "Read SLOTS and return the normalized slots."
   (let* ((allowed-modifiers '(public private protected classmethod staticmethod))
          (tail modifiers))
@@ -80,24 +80,24 @@
                          (list (cons (car rest)
                                      (cons modifiers (eval (cadr rest))))))
                         ((memq key allowed-modifiers)
-                         (oo--read-slots rest (cons key modifiers)))
+                         (class--read-slots rest (cons key modifiers)))
                         (t (error "invalid syntax"))))
                  ((listp key)
-                  (oo--read-slots rest (append key modifiers)))
+                  (class--read-slots rest (append key modifiers)))
                  (t (error "invalid syntax")))))
             slots))))
 
-(defmacro oo-class-of (instance)
+(defmacro class-of (instance)
   "Return the class of INSTANCE."
   `(cddr (assoc 'class ,instance)))
 
-(defmacro oo-bases-of (instance)
+(defmacro class-bases-of (instance)
   "Return the bases (superclasses) of INSTANCE."
   `(cddr (assoc 'bases ,instance)))
 
-(defmacro oo-class-p (instance)
+(defmacro class-p (instance)
   "Return t if INSTANCE is an class object."
-  `(eq (oo-class-of ,instance) 'Type))
+  `(eq (class-of ,instance) 'Type))
 
 (defmacro self. (property &rest args)
   "A shortcut to (@ self (quote PROPERTY) ARGS).
@@ -140,7 +140,7 @@ Supported types are `private', `protected', `classmethod' and
                      (t (error "wrong type of bases"))))
         (members (remove-if (lambda (m) (memq (car m) '(class bases)))
                             (remove-duplicates
-                             (oo--read-slots slots)
+                             (class--read-slots slots)
                              :test
                              (lambda (x y) (eq (car x) (car y)))))))
     (mapc (lambda (base)
@@ -155,7 +155,7 @@ Supported types are `private', `protected', `classmethod' and
        (defun ,name (&rest args)
          ,doc
          (let ((instance '((class . (nil . ,name))))
-               (init (cddr (oo--search-member 'init ,name))))
+               (init (cddr (class--search-member 'init ,name))))
            (when init
              (apply init instance args))
            instance)))))
@@ -166,18 +166,18 @@ Supported types are `private', `protected', `classmethod' and
 If MEMBER is a method, call it with ARGS as arguments.
 If MEMBER is a property, return its value or set the value of ARGS
 to the property, depending on if ARGS supplied."
-  (when (null (oo-class-of instance))
+  (when (null (class-of instance))
     (error "invalid instance"))
   (let* ((nested (and (boundp 'this--instance)
                       (eq this--instance instance)))
          (this--instance instance)
          ;; a slot is (cons member (cons type body))
-         (slot (oo--search-member member instance nested))
+         (slot (class--search-member member instance nested))
          (body (cddr slot)))
     (cond ((and (functionp body)
                 (not (memq member '(class bases))))
            ;; call instance or class method
-           (if (and (oo-class-p instance)
+           (if (and (class-p instance)
                     (or (not (memq 'classmethod (cadr slot)))
                         (memq 'staticmethod (cadr slot))))
                (apply body args)
@@ -192,7 +192,7 @@ to the property, depending on if ARGS supplied."
 (class Object ()
        (defun init (self))
        (defun get-member (self member)
-         (oo--search-member member self)))
+         (class--search-member member self)))
 
 (class Type (Object))
 
