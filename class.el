@@ -99,17 +99,18 @@
   "Return t if INSTANCE is an class object."
   `(eq (class-of ,instance) 'Type))
 
-(defmacro self. (property &rest args)
+;;;;;;;;; aliases
+(defmacro @self (property &rest args)
   "A shortcut to (@ self (quote PROPERTY) ARGS).
 It can be used in class methods in which first argument is `self'."
   `(@ self (quote ,property) ,@args))
 
-(defmacro cls. (property &rest args)
+(defmacro @cls (property &rest args)
   "A shortcut to (@ cls (quote PROPERTY) ARGS).
 It can be used in class methods in which first argument is `cls'."
   `(@ cls (quote ,property) ,@args))
 
-(defmacro this. (property &rest args)
+(defmacro @this (property &rest args)
   "A shortcut to (@ this (quote PROPERTY) ARGS).
 It can be used in class methods in which first argument is `this'."
   `(@ this (quote ,property) ,@args))

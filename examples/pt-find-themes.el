@@ -3,7 +3,7 @@
 
 (class Themes (Iterator)
        (defun apply (self)
-         (let ((theme (self. current)))
+         (let ((theme (@self current)))
            (mapc (lambda (theme) (disable-theme theme))
                  custom-enabled-themes)
            (load-theme theme t)

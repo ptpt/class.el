@@ -10,11 +10,11 @@
             nil)))
 
        (defun verify (self)
-         (@ Fonts 'exists-p (self. current)))
+         (@ Fonts 'exists-p (@self current)))
 
        (defun apply (self)
-         (let ((font (self. current)))
-           (when (self. verify)
+         (let ((font (@self current)))
+           (when (@self verify)
              (add-to-list 'default-frame-alist (cons 'font font))
              (set-frame-font font))
            font)))
