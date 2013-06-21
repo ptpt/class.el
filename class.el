@@ -33,7 +33,7 @@
                          (symbol-value instance)
                        instance))
            (found (assoc member instance))
-           (class (class-of instance))
+           (class (class-type instance))
            (bases (cond ((eq class 'Type)
                          (class-bases-of instance))
                         (class (list class))
@@ -87,7 +87,7 @@
                  (t (error "invalid syntax")))))
             slots))))
 
-(defmacro class-of (instance)
+(defmacro class-type (instance)
   "Return the class of INSTANCE."
   `(cddr (assoc 'class ,instance)))
 
@@ -95,9 +95,9 @@
   "Return the bases (superclasses) of INSTANCE."
   `(cddr (assoc 'bases ,instance)))
 
-(defmacro class-p (instance)
+(defmacro classp (instance)
   "Return t if INSTANCE is an class object."
-  `(eq (class-of ,instance) 'Type))
+  `(eq (class-type ,instance) 'Type))
 
 ;;;;;;;;; aliases
 (defmacro @self (property &rest args)
@@ -167,7 +167,7 @@ Supported types are `private', `protected', `classmethod' and
 If MEMBER is a method, call it with ARGS as arguments.
 If MEMBER is a property, return its value or set the value of ARGS
 to the property, depending on if ARGS supplied."
-  (when (null (class-of instance))
+  (when (null (class-type instance))
     (error "invalid instance"))
   (let* ((nested (and (boundp 'this--instance)
                       (eq this--instance instance)))
@@ -178,7 +178,7 @@ to the property, depending on if ARGS supplied."
     (cond ((and (functionp body)
                 (not (memq member '(class bases))))
            ;; call instance or class method
-           (if (and (class-p instance)
+           (if (and (classp instance)
                     (or (not (memq 'classmethod (cadr slot)))
                         (memq 'staticmethod (cadr slot))))
                (apply body args)
