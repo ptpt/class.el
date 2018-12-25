@@ -1,4 +1,4 @@
-#class.el --- an OOP System in Emacs Lisp
+# class.el --- an OOP System in Emacs Lisp
 
 class.el is an OOP system in Emacs Lisp. Its syntax comes from
 [Python](http://docs.python.org/tutorial/classes.html).
